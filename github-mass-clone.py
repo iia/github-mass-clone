@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import urlparse, json, requests
 import npyscreen, curses
+import urlparse, json, requests
 
 class GitHubMassClone(npyscreen.NPSAppManaged):
     def onStart(self):
@@ -13,116 +13,149 @@ class GitHubMassClone(npyscreen.NPSAppManaged):
 
         self.repositories = []
 
+        # The form name must be "MAIN" to define entry point form-
         self.addForm("MAIN",
-                     FormConfiguration,
-                     name="Configuration",
-                     color="IMPORTANT")
+                     FormMain,
+                     name = "GitHub Mass Clone | Settings",
+                     color = "IMPORTANT")
 
-        self.addFormClass("Repository Selection",
+        self.addFormClass("REPOSITORY SELECTION",
                           FormRepositorySelection,
-                          name="Repository Selection",
-                          color="IMPORTANT")
+                          name = "GitHub Mass Clone | Repository Selection",
+                          color = "IMPORTANT")
+
+        '''
+        self.addFormClass("CLONING,
+                          FormCloning,
+                          name = "GitHub Mass Clone | Cloning",
+                          color = "IMPORTANT")
+        '''
 
     def onCleanExit(self):
         pass
-        #npyscreen.notify_wait("Goodbye!")
 
-    def change_form(self, name):
-        # Switch forms.  NB. Do *not* call the .edit() method directly (which
-        # would lead to a memory leak and ultimately a recursion error).
-        # Instead, use the method .switchForm to change forms.
+    '''
+    def changeForm(self, name):
         self.switchForm(name)
-
-        # By default the application keeps track of every form visited.
-        # There's no harm in this, but we don't need it so:
         self.resetHistory()
+    '''
 
-class FormConfiguration(npyscreen.ActionForm):
+class BoxName(npyscreen.BoxTitle):
+    _contained_widget = npyscreen.Textfield
+
+class BoxType(npyscreen.BoxTitle):
+    _contained_widget = npyscreen.SelectOne
+
+class BoxTransportType(npyscreen.BoxTitle):
+    _contained_widget = npyscreen.SelectOne
+
+class BoxPathStore(npyscreen.BoxTitle):
+    _contained_widget = npyscreen.FilenameCombo
+
+class BoxRepoSelection(npyscreen.BoxTitle):
+    _contained_widget = npyscreen.MultiSelect
+
+class FormMain(npyscreen.ActionForm):
     def create(self):
-        self.type = self.add(npyscreen.TitleSelectOne,
-                             value = [0,],
-                             name = "Type:",
-                             max_height = 2,
-                             values = ["User", "Organization"],
-                             scroll_exit = True)
+        self.box_type = self.add(BoxType,
+                                 name = "Select Type of Entity",
+                                 values = ["User", "Organization"],
+                                 value =  [0],
+                                 max_height = 5,
+                                 scroll_exit = True)
 
         self.add(npyscreen.FixedText,
                  editable=False,
                  value = "")
 
-        self.type_name = self.add(npyscreen.TitleText,
-                                  name = "Name:",
-                                  value = "")
+        self.box_name = self.add(BoxName,
+                                 name = "Name of the Entity",
+                                 value = "",
+                                 max_height = 3)
 
         self.add(npyscreen.FixedText,
                  editable=False,
                  value = "")
 
-        self.type_transport = self.add(npyscreen.TitleSelectOne,
-                                       value = [0,],
-                                       name = "Type:",
-                                       max_height = 3,
-                                       values = ["Git", "SSH", "Clone"],
-                                       scroll_exit = True)
+        self.box_transport_type = self.add(BoxTransportType,
+                                           name = "Type of Transport",
+                                           values = ["Git", "SSH", "Clone"],
+                                           value = [0],
+                                           max_height = 6,
+                                           scroll_exit = True)
 
         self.add(npyscreen.FixedText,
-                 editable=False,
+                 editable = False,
                  value = "")
 
-        self.path_store = self.add(npyscreen.TitleFilenameCombo,
-                                   name = "Store:",
-                                   select_dir = True)
+        self.box_path_store = self.add(BoxPathStore,
+                                       name = "Path to Store",
+                                       select_dir = True,
+                                       max_height = 3)
 
-
-        #self.add_handlers({"^T": self.change_forms})
+        #self.add_handlers({"^C": self.parentApp.switchForm(None)})
+        #self.add_handlers({"^D": self.parentApp.switchForm(None)})
+        #self.add_handlers({"^X": self.parentApp.switchForm(None)})
 
     def on_ok(self):
         # Clear repositories list
         self.parentApp.repositories[:] = []
 
         # Exit the application if the OK button is pressed.
-        if not self.type.value:
-            npyscreen.notify_confirm("Type not defined", title= 'Error')
+        if not self.box_type.value:
+            npyscreen.notify_confirm("Type not defined",
+                                     title = "GitHub Mass Clone | Error")
+
             return
 
-        if self.type.value[0] < 0 or self.type.value[0] > 1:
-            npyscreen.notify_confirm("Undefined type", title= 'Error')
+        if self.box_type.value[0] < 0 or self.box_type.value[0] > 1:
+            npyscreen.notify_confirm("Undefined type",
+                                     title = "GitHub Mass Clone | Error")
+
             return
 
-        if not self.type_name.value:
-            npyscreen.notify_confirm("Type name not defined", title= 'Error')
+        if not self.box_name.value:
+            npyscreen.notify_confirm("Type name not defined",
+                                     title = "GitHub Mass Clone | Error")
             return
 
-        if self.type_transport.value[0] < 0 or self.type_transport.value[0] > 2:
-            npyscreen.notify_confirm("Undefined transport type", title= 'Error')
+        if self.box_transport_type.value[0] < 0 or self.box_transport_type.value[0] > 2:
+            npyscreen.notify_confirm("Undefined transport type",
+                                     title = "GitHub Mass Clone | Error")
+
             return
 
-        if not self.path_store.value:
-            npyscreen.notify_confirm("Path to store undefined", title= 'Error')
+        if not self.box_path_store.value:
+            npyscreen.notify_confirm("Path to store undefined",
+                                     title= "GitHub Mass Clone | Error")
+
             return
 
         url = ""
 
-        if self.type.value[0] == self.parentApp.TYPE_USER:
+        if self.box_type.value[0] == self.parentApp.TYPE_USER:
             url = urlparse.urljoin("https://api.github.com/users/",
-                                   "/".join([self.type_name.value, "repos"]))
-        elif self.type.value[0] == self.parentApp.TYPE_ORGANIZATION:
+                                   "/".join([self.box_name.value, "repos"]))
+        elif self.box_type.value[0] == self.parentApp.TYPE_ORGANIZATION:
             url = urlparse.urljoin("https://api.github.com/orgs/",
-                                   "/".join([self.type_name.value, "repos"]))
+                                   "/".join([self.box_name.value, "repos"]))
 
-        headers = {"content-type": "application/json"}
         payload = {}
-        response = requests.get(url, data = json.dumps(payload), headers = headers)
+        headers = {"content-type": "application/json"}
+        response = requests.get(url,
+                                data = json.dumps(payload),
+                                headers = headers)
 
         if response.status_code != 200:
-            npyscreen.notify_confirm("Get request failed", title= 'Error')
+            npyscreen.notify_confirm("Get request failed",
+                                     title = "GitHub Mass Clone | Error")
+
             return
 
         response_json = response.json()
 
         response.close()
 
-        #check type of response_json is list
         for r in response_json:
             rd = {}
 
@@ -134,31 +167,33 @@ class FormConfiguration(npyscreen.ActionForm):
             self.parentApp.repositories.append(rd)
 
         if len(self.parentApp.repositories) < 1:
-            npyscreen.notify_confirm("No repositories found", title='Error')
+            npyscreen.notify_confirm("No repositories found",
+                                     title="GitHub Mass Clone | Error")
+
             return
 
-        self.parentApp.switchForm("Repository Selection")
+        self.parentApp.switchForm("REPOSITORY SELECTION")
 
     def on_cancel(self):
         self.parentApp.switchForm(None)
 
 class FormRepositorySelection(npyscreen.ActionForm):
     def create(self):
-        self.repo_titles = []
+        self.repo_names = []
 
         for i in range(len(self.parentApp.repositories)):
-            self.repo_titles.append(self.parentApp.repositories[i]["name"])
+            self.repo_names.append(self.parentApp.repositories[i]["name"])
 
-        self.repo_selection = self.add(npyscreen.TitleMultiSelect,
-                                       max_height = 16,
-                                       value = [],
-                                       name = "Available Repositories:",
-                                       values = self.repo_titles,
-                                       scroll_exit = True)
+        self.box_repo_selection = self.add(BoxRepoSelection,
+                                           name = "Available Repositories",
+                                           values = self.repo_names,
+                                           value = [],
+                                           scroll_exit = True)
 
     def on_ok(self):
         # Exit the application if the OK button is pressed.
-        npyscreen.notify_confirm(str(self.repo_selection), title= 'Info')
+        npyscreen.notify_confirm(str(self.box_repo_selection.value),
+                                 title = 'Info')
         self.parentApp.switchForm(None)
 
     def on_cancel(self):
