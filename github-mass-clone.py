@@ -174,6 +174,8 @@ class FormMain(npyscreen.FormBaseNew):
 
             return
 
+        response_json = sorted(response_json, key = lambda k: k["name"])
+
         for r in response_json:
             rd = {}
 
