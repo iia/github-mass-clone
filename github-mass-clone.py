@@ -11,6 +11,7 @@ class GitHubMassClone(npyscreen.NPSAppManaged):
         self.TYPE_TRANSOPORT_SSH = 1
         self.TYPE_TRANSOPORT_CLONE = 2
 
+        self.repo_names = []
         self.url_chosen = None
         self.repositories = []
         self.path_store = None
@@ -48,8 +49,6 @@ class BoxRepoSelection(npyscreen.BoxTitle):
 
 class FormMain(npyscreen.FormBaseNew):
     def create(self):
-        self.repo_names = []
-
         self.box_type = self.add(BoxType,
                                  name = "Select Type of Entity",
                                  values = ["User", "Organization"],
@@ -77,6 +76,7 @@ class FormMain(npyscreen.FormBaseNew):
 
         self.box_path_store = self.add(BoxPathStore,
                                        name = "Path to Store",
+                                       value = None,
                                        select_dir = True,
                                        max_height = 3)
 
@@ -167,12 +167,14 @@ class FormMain(npyscreen.FormBaseNew):
 
             return
 
-        self.repo_names[:] = []
+        self.parentApp.repo_names[:] = []
 
         for r in self.parentApp.repositories:
-            self.repo_names.append(r["name"])
+            self.parentApp.repo_names.append(r["name"])
 
-        self.parentApp.form_repository_selection.box_repo_selection.values = self.repo_names
+        for rn in self.parentApp.repo_names:
+            self.parentApp.form_repository_selection.box_repo_selection.values.append(rn)
+
         self.parentApp.form_repository_selection.box_repo_selection.value = None
 
         self.parentApp.changeForm("REPOSITORY SELECTION")
@@ -189,11 +191,11 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
                                            scroll_exit = True)
 
         self.button_ok = self.add(npyscreen.ButtonPress,
-                                  name = "OK",
+                                  name = "Start",
                                   when_pressed_function = self.button_ok_pressed)
 
         self.nextrely -= 1
-        self.nextrelx += 6
+        self.nextrelx += 9
 
         self.button_back = self.add(npyscreen.ButtonPress,
                                     name = "Back",
@@ -206,6 +208,11 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
                                     name = "Exit",
                                     when_pressed_function = self.button_exit_pressed)
 
+        self.nextrely += 1
+        self.nextrelx -= 16
+
+        self.status_bar = self.add(npyscreen.Textfield, value = "")
+
     def button_ok_pressed(self):
         if len(self.box_repo_selection.value) < 1:
             npyscreen.notify_confirm("No repositories selected.",
@@ -216,6 +223,11 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
         self.repos_selected = self.box_repo_selection.value
         self.repos_selected.sort()
 
+        self.box_repo_selection.values[:] = []
+
+        for rn in self.parentApp.repo_names:
+            self.box_repo_selection.values.append(rn)
+
         # Do the actual cloning and keep updating ther progress form.
         for idx in self.repos_selected:
             ps = None
@@ -223,33 +235,55 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
             stderr = None
             repo_name = self.box_repo_selection.values[idx]
 
+            self.status_bar.value = "Processing... (" + str(idx) + " of " + str(len(self.repos_selected)) + ")"
+            self.status_bar.display()
+
             self.box_repo_selection.values[idx] = repo_name + " >>> Processing... <<<"
             self.box_repo_selection.display()
-            #import time
-            #time.sleep(2)
-            #continue
 
             if self.parentApp.url_chosen == self.parentApp.TYPE_TRANSOPORT_GIT:
-                ps = subprocess.Popen("git clone --quiet " + self.parentApp.repositories[idx]["url_git"], cwd = self.parentApp.path_store, stdout = subprocess.PIPE, shell = True)
+                ps = subprocess.Popen("git clone --quiet " + self.parentApp.repositories[idx]["url_git"],
+                                      cwd = self.parentApp.path_store,
+                                      stdin = None,
+                                      stdout = subprocess.PIPE,
+                                      stderr = subprocess.PIPE,
+                                      shell = True)
             elif self.parentApp.url_chosen == self.parentApp.TYPE_TRANSOPORT_SSH:
-                ps = subprocess.Popen("git clone --quiet " + self.parentApp.repositories[idx]["url_ssh"], cwd = self.parentApp.path_store, stdout = subprocess.PIPE, shell = True)
+                ps = subprocess.Popen("git clone --quiet " + self.parentApp.repositories[idx]["url_ssh"],
+                                      cwd = self.parentApp.path_store,
+                                      stdin = None,
+                                      stdout = subprocess.PIPE,
+                                      stderr = subprocess.PIPE,
+                                      shell = True)
             elif self.parentApp.url_chosen == self.parentApp.TYPE_TRANSOPORT_CLONE:
-                ps = subprocess.Popen("git clone --quiet " + str(self.parentApp.repositories[idx]["url_clone"]) , cwd = self.parentApp.path_store, stdout = subprocess.PIPE, shell = True)
+                ps = subprocess.Popen("git clone --quiet " + str(self.parentApp.repositories[idx]["url_clone"]),
+                                      cwd = self.parentApp.path_store,
+                                      stdin = None,
+                                      stdout = subprocess.PIPE,
+                                      stderr = subprocess.PIPE,
+                                      shell = True)
 
             stdout, stderr = ps.communicate()
 
+            if stderr:
+                self.parentApp.repositories[idx]["status_message"] = stderr
+
+            if stdout:
+                self.parentApp.repositories[idx]["status_message"] = self.parentApp.repositories[idx]["status_message"] + " " + stdout
+
             if ps.returncode != 0:
-                if stderr:
-                    self.parentApp.repositories[idx]["status_message"] = stderr
-
-                if stdout:
-                    self.parentApp.repositories[idx]["status_message"] = self.parentApp.repositories[idx]["status_message"] + " " + stdout
+                if not stderr and not stdout:
+                    self.parentApp.repositories[idx]["status_message"] = "Failed"
             else:
-                self.parentApp.repositories[idx]["status_message"] = "OK"
+                if not stderr:
+                    self.parentApp.repositories[idx]["status_message"] = "OK"
 
-            # TODO: Handle newline.
+            self.parentApp.repositories[idx]["status_message"] = self.parentApp.repositories[idx]["status_message"].replace("\n", " ")
             self.box_repo_selection.values[idx] = repo_name + " >>> " + self.parentApp.repositories[idx]["status_message"] + " <<<"
             self.box_repo_selection.display()
+
+        self.status_bar.value = ""
+        self.status_bar.display()
 
     def button_back_pressed(self):
         # Clear repositories list.
