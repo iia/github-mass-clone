@@ -15,6 +15,7 @@ class GitHubMassClone(npyscreen.NPSAppManaged):
         self.url_chosen = None
         self.repositories = []
         self.path_store = None
+        self.is_canceled = False
 
         # Set a theme.
         npyscreen.setTheme(npyscreen.Themes.ElegantTheme)
@@ -33,6 +34,7 @@ class GitHubMassClone(npyscreen.NPSAppManaged):
         self.resetHistory()
 
     def signalHandler(self, signal, frame):
+        self.is_canceled = True
         self.changeForm(None)
 
 class BoxName(npyscreen.BoxTitle):
@@ -233,6 +235,9 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
 
         # Do the actual cloning and keep updating ther progress form.
         for idx in self.repos_selected:
+            if self.parentApp.is_canceled:
+                break
+
             ps = None
             stdout = None
             stderr = None
