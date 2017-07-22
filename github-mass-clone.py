@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import npyscreen, curses
-import urlparse, json, requests, subprocess
+import urlparse, json, requests, subprocess, signal
 
 class GitHubMassClone(npyscreen.NPSAppManaged):
     def onStart(self):
@@ -31,6 +31,9 @@ class GitHubMassClone(npyscreen.NPSAppManaged):
     def changeForm(self, name):
         self.switchForm(name)
         self.resetHistory()
+
+    def signalHandler(self, signal, frame):
+        self.changeForm(None)
 
 class BoxName(npyscreen.BoxTitle):
     _contained_widget = npyscreen.Textfield
@@ -235,7 +238,7 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
             stderr = None
             repo_name = self.box_repo_selection.values[idx]
 
-            self.status_bar.value = "Processing... (" + str(idx) + " of " + str(len(self.repos_selected)) + ")"
+            self.status_bar.value = "Processing... (" + str(idx + 1) + " of " + str(len(self.repos_selected)) + ")"
             self.status_bar.display()
 
             self.box_repo_selection.values[idx] = repo_name + " >>> Processing... <<<"
@@ -297,4 +300,8 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
 
 if __name__ == '__main__':
     gmc = GitHubMassClone()
+
+    signal.signal(signal.SIGINT, gmc.signalHandler)
+    signal.signal(signal.SIGUSR1, gmc.signalHandler)
+
     gmc.run()
