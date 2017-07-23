@@ -14,12 +14,12 @@ Settings
 --------
 
 <p align="center">
-    <img align="center" src="https://github.com/iia/github-mass-clone/blob/master/github_images/settings.png" width="350" height="450" />
+    <img align="center" src="https://github.com/iia/github-mass-clone/blob/master/github_images/settings.png" width="450" height="450" />
 </p>
 
 Repository Selection
 --------------------
 
 <p align="center">
-    <img align="center" src="https://github.com/iia/github-mass-clone/blob/master/github_images/progress.png" width="350" height="450" />
+    <img align="center" src="https://github.com/iia/github-mass-clone/blob/master/github_images/progress.png" width="450" height="450" />
 </p>
