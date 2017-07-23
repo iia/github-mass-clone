@@ -156,7 +156,8 @@ class FormMain(npyscreen.FormBaseNew):
         self.status_bar.display()
 
         while True:
-            response = requests.get(url + str(i), headers = {"content-type": "application/json"})
+            response = requests.get(url + str(i),
+                                    headers = {"content-type": "application/json"})
 
             if response.status_code != 200:
                 npyscreen.notify_confirm("Get request failed",
@@ -320,7 +321,8 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
                 self.parentApp.repositories[idx_value]["status_message"] = stderr
 
             if stdout:
-                self.parentApp.repositories[idx_value]["status_message"] = self.parentApp.repositories[idx_value]["status_message"] + " " + stdout
+                self.parentApp.repositories[idx_value]["status_message"] = \
+                    self.parentApp.repositories[idx_value]["status_message"] + " " + stdout
 
             if ps.returncode != 0:
                 if not stderr and not stdout:
@@ -329,8 +331,10 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
                 if not stderr:
                     self.parentApp.repositories[idx_value]["status_message"] = "OK"
 
-            self.parentApp.repositories[idx_value]["status_message"] = self.parentApp.repositories[idx_value]["status_message"].replace("\n", " ")
-            self.box_repo_selection.values[idx_value] = repo_name + " >>> " + self.parentApp.repositories[idx_value]["status_message"] + " <<<"
+            self.parentApp.repositories[idx_value]["status_message"] = \
+                self.parentApp.repositories[idx_value]["status_message"].replace("\n", " ")
+            self.box_repo_selection.values[idx_value] = \
+                repo_name + " >>> " + self.parentApp.repositories[idx_value]["status_message"] + " <<<"
             self.box_repo_selection.display()
 
             self.pbar.hidden = False
