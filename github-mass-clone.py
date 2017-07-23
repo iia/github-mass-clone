@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import npyscreen, curses
+import npyscreen
 import urlparse, json, requests, subprocess, signal
 
 class GitHubMassClone(npyscreen.NPSAppManaged):
