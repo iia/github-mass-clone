@@ -13,6 +13,18 @@ Python module npyscreen.
 Settings
 --------
 
+* Type of Entity
+    - Whether the GitHub account is of an user or organization.
+
+* Name of Entity
+    - Name of the Github user/organization account.
+
+* Type of Transport
+    - What kind of GitHub link is to be used.
+
+* Path to Store
+    - Existing directory location to which selected repositories will be cloned.
+
 <p align="center">
     <img align="center" src="https://github.com/iia/github-mass-clone/blob/master/github_images/settings.png" width="650" height="550" />
 </p>
