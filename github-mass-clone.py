@@ -98,6 +98,11 @@ class FormMain(npyscreen.FormBaseNew):
                                     name = "Exit",
                                     when_pressed_function = self.button_exit_pressed)
 
+        self.nextrelx -= 6
+        self.nextrely += 1
+
+        self.status_bar = self.add(npyscreen.Textfield, value = "", editable = False)
+
     def button_ok_pressed(self):
         # Clear repositories list.
         self.parentApp.repositories[:] = []
@@ -147,6 +152,9 @@ class FormMain(npyscreen.FormBaseNew):
         response_json = []
         i = 1
 
+        self.status_bar.value = "Please wait... getting repository list"
+        self.status_bar.display()
+
         while True:
             response = requests.get(url + str(i), headers = {"content-type": "application/json"})
 
@@ -154,6 +162,9 @@ class FormMain(npyscreen.FormBaseNew):
                 npyscreen.notify_confirm("Get request failed",
                                          title = "GitHub Mass Clone | Error")
                 response.close()
+
+                self.status_bar.value = ""
+                self.status_bar.display()
 
                 return
 
@@ -167,6 +178,9 @@ class FormMain(npyscreen.FormBaseNew):
 
             i = i + 1
             response.close()
+
+        self.status_bar.value = ""
+        self.status_bar.display()
 
         if len(response_json) < 1:
             npyscreen.notify_confirm("Get request returned empty list",
@@ -198,6 +212,8 @@ class FormMain(npyscreen.FormBaseNew):
         for r in self.parentApp.repositories:
             self.parentApp.repo_names.append(r["name"])
 
+        self.parentApp.form_repository_selection.box_repo_selection.values[:] = []
+
         for rn in self.parentApp.repo_names:
             self.parentApp.form_repository_selection.box_repo_selection.values.append(rn)
 
@@ -215,6 +231,8 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
                                            values = [],
                                            max_height = 24,
                                            scroll_exit = True)
+
+        self.nextrely += 1
 
         self.button_ok = self.add(npyscreen.ButtonPress,
                                   name = "Start",
@@ -237,7 +255,10 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
         self.nextrely += 1
         self.nextrelx -= 16
 
-        self.status_bar = self.add(npyscreen.Textfield, value = "", editable = False)
+        self.pbar = self.add(npyscreen.SliderPercent,
+                             value = 0,
+                             editable = False,
+                             hidden = True)
 
     def button_ok_pressed(self):
         if len(self.box_repo_selection.value) < 1:
@@ -254,6 +275,10 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
         for rn in self.parentApp.repo_names:
             self.box_repo_selection.values.append(rn)
 
+        self.pbar.hidden = False
+        self.pbar.value = 0
+        self.pbar.display()
+
         # Do the actual cloning and keep updating ther progress form.
         for idx, idx_value in enumerate(self.repos_selected):
             if self.parentApp.is_canceled:
@@ -263,9 +288,6 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
             stdout = None
             stderr = None
             repo_name = self.box_repo_selection.values[idx_value]
-
-            self.status_bar.value = "Processing... (" + str(idx + 1) + " of " + str(len(self.repos_selected)) + ")"
-            self.status_bar.display()
 
             self.box_repo_selection.values[idx_value] = repo_name + " >>> Processing... <<<"
             self.box_repo_selection.display()
@@ -311,12 +333,19 @@ class FormRepositorySelection(npyscreen.FormBaseNew):
             self.box_repo_selection.values[idx_value] = repo_name + " >>> " + self.parentApp.repositories[idx_value]["status_message"] + " <<<"
             self.box_repo_selection.display()
 
-        self.status_bar.value = ""
-        self.status_bar.display()
+            self.pbar.hidden = False
+            self.pbar.value = (float(idx + 1) / float(len(self.repos_selected))) * 100
+            self.pbar.display()
+
+        self.pbar.hidden = True
+        self.pbar.display()
 
     def button_back_pressed(self):
         # Clear repositories list.
         self.parentApp.repositories[:] = []
+
+        # Clear repository selection widget list.
+        self.box_repo_selection.values[:] = []
 
         # Go back to configuration form.
         self.parentApp.changeForm("MAIN")
