@@ -8,7 +8,7 @@ Dependencies
 ------------
 
 To be able to use the tool a working Python installation is required with the
-Python module npyscreen.
+Python modules npyscreen and requests.
 
 Settings
 --------
